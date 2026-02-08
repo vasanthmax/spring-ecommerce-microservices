@@ -1,0 +1,69 @@
+services:
+  postgresql:
+    container_name: ms_pg_sql
+    image: postgres
+    environment:
+      POSTGRES_USER: vasanth
+      POSTGRES_PASSWORD: vasanth
+      PGDATA: /data/postgres
+    volumes:
+      - postgres:/data/postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - microservices-network
+    restart: unless-stopped
+  pgadmin:
+    container_name: ms_pgadmin
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin@pgadmin.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    networks:
+      - microservices-network
+    ports:
+      - "5050:80"
+    restart: unless-stopped
+  mongo:
+    image: mongo
+    container_name: ms_mongo_db
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=vasanth
+      - MONGO_INITDB_ROOT_PASSWORD=vasanth
+    networks:
+      - microservices-network
+    volumes:
+      - mongodb:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  mongoexpress:
+    image: mongo-express
+    container_name: ms_mongo_express
+    restart: always
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=vasanth
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=vasanth
+      - ME_CONFIG_MONGODB_SERVER=mongo
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge
+volumes:
+  postgres:
+  pgadmin:
+  mongodb:
